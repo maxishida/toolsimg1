@@ -1,8 +1,8 @@
 import React, { useRef, useState } from 'react';
-import { Upload, Sparkles, Image as ImageIcon } from 'lucide-react';
+import { Upload, Sparkles, Image as ImageIcon, Users } from 'lucide-react';
 
 interface InputSectionProps {
-  onStart: (description: string, file: File) => void;
+  onStart: (description: string, file: File, filter: string) => void;
   isProcessing: boolean;
 }
 
@@ -10,6 +10,7 @@ const InputSection: React.FC<InputSectionProps> = ({ onStart, isProcessing }) =>
   const [description, setDescription] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [filter, setFilter] = useState('General Audience');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,7 +26,7 @@ const InputSection: React.FC<InputSectionProps> = ({ onStart, isProcessing }) =>
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (description && selectedFile) {
-      onStart(description, selectedFile);
+      onStart(description, selectedFile, filter);
     }
   };
 
@@ -73,9 +74,32 @@ const InputSection: React.FC<InputSectionProps> = ({ onStart, isProcessing }) =>
           )}
         </div>
 
-        {/* Description Input */}
-        <div>
-          <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">Product Description</label>
+        {/* Inputs Container */}
+        <div className="space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+             <label className="text-sm font-medium text-slate-600 dark:text-slate-300">Product Description</label>
+             
+             {/* Filter Dropdown */}
+             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5">
+                <Users size={16} className="text-slate-400" />
+                <select 
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  className="bg-transparent border-none text-sm text-slate-700 dark:text-slate-200 focus:ring-0 cursor-pointer outline-none"
+                >
+                  <option value="General Audience">General Audience</option>
+                  <option value="Men">Target: Men</option>
+                  <option value="Women">Target: Women</option>
+                  <option value="Kids">Target: Kids</option>
+                  <option value="Teens">Target: Teens</option>
+                  <option value="Luxury/High-Net-Worth">Target: Luxury Buyers</option>
+                  <option value="Cartoon Character Style">Style: Cartoon Characters</option>
+                  <option value="Artistic/Abstract">Style: Artistic/Abstract</option>
+                  <option value="Cyberpunk/Sci-Fi">Style: Cyberpunk</option>
+                </select>
+             </div>
+          </div>
+
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}

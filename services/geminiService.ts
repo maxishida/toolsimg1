@@ -13,7 +13,8 @@ const getAiClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 export const analyzeAndArchitectPrompts = async (
   description: string,
   imageBase64: string,
-  mimeType: string
+  mimeType: string,
+  filter: string = "General Audience"
 ): Promise<AgentAnalysis> => {
   const ai = getAiClient();
 
@@ -21,7 +22,13 @@ export const analyzeAndArchitectPrompts = async (
     You are an expert Commercial Creative Director AI. 
     Your goal is to analyze a product description and image, then generate 6 distinct, high-end visual prompts for an image generation model.
     
-    The 6 required styles are:
+    CRITICAL INSTRUCTION: The user has specified a specific target audience or style filter: "${filter}".
+    You MUST tailor ALL 6 prompts to appeal specifically to this filter. 
+    If the filter is "Men", focus on masculine aesthetics, bold lighting, or relevant contexts.
+    If the filter is "Cartoon Character", the product should interact with animated characters or exist in a stylized world.
+    If the filter is "Artists", focus on creative, abstract, or studio settings.
+    
+    The 6 required styles (adapted for the "${filter}" filter) are:
     1. Metáfora Surreal de Luxo (Surreal Luxury Metaphor)
     2. Conceito Tecnológico Futurista (Futuristic Tech Concept)
     3. Impacto Emocional Cinematográfico (Cinematic Emotional Impact)
@@ -29,7 +36,7 @@ export const analyzeAndArchitectPrompts = async (
     5. Conceito Artístico Abstrato (Abstract Artistic Concept)
     6. Narrativa Simbólica de Marca (Symbolic Brand Narrative)
     
-    For each style, write a detailed, descriptive prompt (in English) that incorporates the user's product description but elevates it to a global ad campaign level.
+    For each style, write a detailed, descriptive prompt (in English) that incorporates the user's product description but elevates it to a global ad campaign level targeting "${filter}".
     Keep the prompt focused on visual details, lighting, texture, and composition.
   `;
 
@@ -37,7 +44,7 @@ export const analyzeAndArchitectPrompts = async (
     model: "gemini-3-flash-preview",
     contents: {
       parts: [
-        { text: `Analyze this product: "${description}". Generate the 6 prompts.` },
+        { text: `Analyze this product: "${description}". The target filter is: "${filter}". Generate the 6 prompts.` },
         {
           inlineData: {
             mimeType: mimeType,

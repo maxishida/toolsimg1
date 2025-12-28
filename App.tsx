@@ -53,7 +53,7 @@ const App: React.FC = () => {
     });
   };
 
-  const handleStart = async (description: string, file: File) => {
+  const handleStart = async (description: string, file: File, filter: string) => {
     try {
       setStep(AppStep.ANALYZING);
       setError(null);
@@ -61,8 +61,8 @@ const App: React.FC = () => {
       const info = { description, imageBase64: base64, mimeType: file.type };
       setProductInfo(info);
 
-      // 1. Analyze & Architect
-      const analysis = await analyzeAndArchitectPrompts(description, base64, file.type);
+      // 1. Analyze & Architect with Filter
+      const analysis = await analyzeAndArchitectPrompts(description, base64, file.type, filter);
       console.log('Analysis:', analysis);
 
       // 2. Initialize Placeholders and switch to Gallery View immediately

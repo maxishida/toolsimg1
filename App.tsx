@@ -198,6 +198,11 @@ const App: React.FC = () => {
     setStep(AppStep.SELECTION);
   };
 
+  const handleBackToGallery = () => {
+    setVideoUrl(null);
+    setStep(AppStep.SELECTION);
+  }
+
   const handleReset = () => {
     setStep(AppStep.INPUT);
     setProductInfo(null);
@@ -296,7 +301,7 @@ const App: React.FC = () => {
         )}
 
         {step === AppStep.COMPLETED && videoUrl && (
-          <VideoResult videoUrl={videoUrl} onReset={handleReset} />
+          <VideoResult videoUrl={videoUrl} onReset={handleReset} onBack={handleBackToGallery} />
         )}
       </main>
 

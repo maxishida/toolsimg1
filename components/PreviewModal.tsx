@@ -11,8 +11,8 @@ interface PreviewModalProps {
 const PreviewModal: React.FC<PreviewModalProps> = ({ videoUrl, onConfirm, onCancel, isProcessing }) => {
   return (
     <div className="fixed inset-0 bg-slate-900/95 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden max-w-4xl w-full shadow-2xl flex flex-col">
-        <div className="p-4 border-b border-slate-800 flex justify-between items-center">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden max-w-4xl w-full shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="p-4 border-b border-slate-800 flex justify-between items-center shrink-0">
           <h3 className="text-xl font-bold text-white flex items-center gap-2">
             <Film size={20} className="text-amber-500"/> Preview Animation
           </h3>
@@ -21,11 +21,18 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ videoUrl, onConfirm, onCanc
           </button>
         </div>
         
-        <div className="relative aspect-video bg-black">
-             <video src={videoUrl} controls autoPlay loop className="w-full h-full object-contain" />
+        {/* Responsive Video Container */}
+        <div className="relative bg-black flex-grow flex items-center justify-center overflow-hidden min-h-[200px]">
+             <video 
+                src={videoUrl} 
+                controls 
+                autoPlay 
+                loop 
+                className="w-auto h-auto max-w-full max-h-[50vh] object-contain" 
+             />
         </div>
 
-        <div className="p-6 bg-slate-800/50 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="p-6 bg-slate-800/50 flex flex-col md:flex-row items-center justify-between gap-4 shrink-0">
            <div className="text-sm text-slate-400">
              <p className="font-semibold text-slate-300">Preview Quality (720p)</p>
              <p>Generate final campaign to get full 1080p high-definition video.</p>

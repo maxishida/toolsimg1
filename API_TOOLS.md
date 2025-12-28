@@ -4,21 +4,33 @@ This document details the specific Google Gemini API "tools" and model configura
 
 ---
 
-## 1. Product Interpreter & Prompt Architect
+## 1. Dynamic Agent System: Product Interpreter & Prompt Architect
 **Function:** Analyzes raw product inputs and generates structured, creative campaign data.
+**Model:** `gemini-3-flash-preview`
+**Method:** `ai.models.generateContent`
 
-*   **Model:** `gemini-3-flash-preview`
-*   **Method:** `ai.models.generateContent`
-*   **Input Modality:** Multimodal (Text Description + Base64 Image).
-*   **System Instruction:**
-    > "You are an expert Commercial Creative Director AI. Your goal is to analyze a product description and image, then generate 6 distinct, high-end visual prompts..."
+### Dynamic System Instructions
+The System Instruction (Persona) of this agent changes dynamically based on the **Generator Style** selected by the user.
+
+| Generator Style | Persona (System Instruction Role) | Key Task |
+| :--- | :--- | :--- |
+| **Cinematic Ad** (Default) | `Commercial Creative Director AI` | Generate high-end, viral global ad campaign concepts. |
+| **Chibi Shop** | `3D Miniature Architect AI` | Transform product into a "Chibi Style" isometric shop/building. |
+| **Knolling Layout** | `Industrial Design Layout AI` | Deconstruct product into a perfect 90-degree grid layout. |
+| **Dynamic Forces** | `VFX Supervisor AI` | Place product in center of elemental forces (Fire, Water, Ice). |
+| **Landmark Infographic** | `Technical Architectural AI` | Overlay blueprints and technical specs onto product/location. |
+| **Glossy Glass Logo** | `3D Icon Designer AI` | Transform brand/logo into a modern 3D glass app icon. |
+| **Textured Logo** | `Material Artist AI` | Apply hyper-realistic textures (Neon, Lava, Wood) to the logo. |
+| **Seasonal Cycle** | `Landscape Artist AI` | Create distinct atmospheres reflecting Winter, Spring, Summer, Fall. |
+| **CraveCanvas** | `World-Class Food Stylist AI` | Create Michelin-star level food photography concepts. |
+| **Art Studio** | `Fine Art Curator AI` | Re-imagine product in Oil Paint, Cyberpunk, Watercolor styles. |
 
 ### Configuration (`GenerationConfig`)
 We utilize **JSON Mode** with a strict schema to ensure the UI can deterministically parse the AI's creative output.
 
 ```typescript
 config: {
-  systemInstruction: "...", // See services/geminiService.ts
+  systemInstruction: getSystemInstructionForStyle(selectedStyle), // Dynamic based on user selection
   responseMimeType: "application/json",
   responseSchema: {
     type: Type.OBJECT,
@@ -31,7 +43,7 @@ config: {
         items: {
           type: Type.OBJECT,
           properties: {
-            styleName: { type: Type.STRING }, // e.g., "Luxury Metaphor"
+            styleName: { type: Type.STRING }, // e.g., "Isometric View", "Fire Storm"
             promptText: { type: Type.STRING }, // Detailed visual description
           },
           required: ["styleName", "promptText"],

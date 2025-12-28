@@ -27,12 +27,15 @@ This document outlines the software architecture, the specific AI pipeline imple
 
 AdFusion does not simply prompt a model once. It orchestrates a chain of specific models to ensure high quality. All logic resides in `services/geminiService.ts`.
 
-### Step 1: Analysis & Creative Direction
-*   **Goal:** Understand the product and generate prompt engineering strategies.
+### Step 1: Analysis & Creative Direction (Dynamic Agents)
+*   **Goal:** Understand the product and generate prompt engineering strategies tailored to a specific art style.
 *   **Model:** `gemini-3-flash-preview`
-*   **Input:** User's raw text + Base64 encoded original image.
-*   **System Prompt:** Acts as a "Commercial Creative Director". It is instructed to output JSON containing strict categories (Luxury, Tech, Cinematic, etc.).
-*   **Output:** A JSON object containing 6 distinct, highly detailed visual prompts.
+*   **Input:** User's raw text + Base64 encoded original image + **Selected Generator Style**.
+*   **Mechanism:**
+    *   The `getSystemInstructionForStyle()` function injects a specific "persona" into the system prompt based on user selection.
+    *   *Example:* Selecting "Chibi Shop" activates the "3D Miniature Architect" persona.
+    *   *Example:* Selecting "Knolling" activates the "Industrial Design Layout" persona.
+*   **Output:** A JSON object containing 6 distinct, highly detailed visual prompts optimized for that specific style.
 
 ### Step 2: Commercial Image Synthesis
 *   **Goal:** Create a photorealistic "Hero Shot" of the product in a new environment.

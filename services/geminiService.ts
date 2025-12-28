@@ -2,49 +2,104 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { AgentAnalysis, GeneratedImage } from "../types";
 
 // Initialize the API client
-// Note: For Veo, we re-initialize with the selected key in the component logic if needed,
-// but for standard generation we use the env key.
 const getAiClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 /**
+ * HELPER: Get System Instruction based on Generator Style
+ */
+const getSystemInstructionForStyle = (filter: string): string => {
+  switch (filter) {
+    case 'chibi_shop':
+      return `
+        You are a 3D Miniature Architect AI.
+        Task: Transform the user's input product into a "Chibi Style" 3D isometric shop or building.
+        Example: If the product is a donut, create a "Donut Shop" shaped like the donut. If it's a shoe, a "Sneaker Store" inside the shoe.
+        Requirement: Generate 6 variations of this miniature world concept. 
+        Focus on: Cute lighting, isometric view, miniature characters, cozy atmosphere, high detail 3D render.
+      `;
+    case 'knolling_layout':
+      return `
+        You are an Industrial Design Layout AI.
+        Task: Create a "Knolling" style layout for the product.
+        Concept: Deconstruct the product (or show related items) arranged in a perfect grid/90-degree alignment.
+        Requirement: Generate 6 variations of layout (different background colors, different spacing, different lighting).
+        Focus on: Clean lines, top-down view (flat lay), organized chaos, museum quality lighting.
+      `;
+    case 'dynamic_forces':
+      return `
+        You are a VFX Supervisor AI.
+        Task: Place the product in the center of dynamic elemental forces (Fire, Water, Ice, Wind).
+        Requirement: Generate 6 high-impact action shots. 
+        Focus on: Particle effects, motion blur, dramatic contrast, elemental energy swirling around the static product.
+      `;
+    case 'landmark_infographic':
+      return `
+        You are a Technical Architectural AI.
+        Task: Overlay technical blueprints, chalk sketches, and measurement lines onto the image or create a poster style.
+        Requirement: Generate 6 infographic styles (Blueprint, Chalkboard, Holographic Overlay, Museum Placard).
+        Focus on: White lines, technical data, precision, educational aesthetic.
+      `;
+    case 'glossy_logo':
+      return `
+        You are a 3D Icon Designer AI.
+        Task: Transform the input (brand/logo) into a "Glossy Glass" 3D App Icon.
+        Requirement: Generate 6 variations of glass refraction, edge bevels, and inner glow.
+        Focus on: Apple design aesthetic, translucent glass, soft shadows, vibrant gradients.
+      `;
+    case 'textured_logo':
+      return `
+        You are a Material Artist AI.
+        Task: Apply hyper-realistic textures to the logo/object.
+        Requirement: Generate 6 variations: Neon, Wood, Chrome, Lava, Liquid, Stone.
+        Focus on: Surface detail, bump maps, realistic lighting reflection.
+      `;
+    case 'seasonal_cycle':
+      return `
+        You are a Landscape Artist AI.
+        Task: Create a panoramic concept showing the transition of seasons (Winter to Spring to Summer to Fall).
+        Requirement: Since we generate single images, generate 6 distinct "Time of Year" distinct atmospheres for the product setting.
+        Focus on: Environmental storytelling, color palette shifts (Cool blues to Warm oranges).
+      `;
+    case 'crave_canvas':
+      return `
+        You are a World-Class Food Stylist AI.
+        Task: Create 6 Michelin-star food photography concepts.
+        Focus on: Steam, water droplets, macro details, depth of field, appetizing color grading.
+      `;
+    case 'art_studio':
+      return `
+        You are a Fine Art Curator AI.
+        Task: Re-imagine the product in 6 distinct art styles (Oil Painting, Cyberpunk, Watercolor, Pop Art, Marble Sculpture, Origami).
+      `;
+    case 'cinematic_ad':
+    default:
+      return `
+        You are an expert Commercial Creative Director AI. 
+        Task: Generate 6 distinct, high-end visual prompts for a global ad campaign.
+        Styles to include: Luxury Metaphor, Futuristic Tech, Emotional Cinematic, Clean Premium, Abstract Art, Symbolic Narrative.
+        Focus on visual details, lighting, texture, and composition.
+      `;
+  }
+};
+
+/**
  * AGENT 1 & 2: Product Interpreter & Prompt Architect
- * Takes user input and generates 6 structural prompts based on the predefined styles.
  */
 export const analyzeAndArchitectPrompts = async (
   description: string,
   imageBase64: string,
   mimeType: string,
-  filter: string = "General Audience"
+  filter: string = "cinematic_ad"
 ): Promise<AgentAnalysis> => {
   const ai = getAiClient();
 
-  const systemInstruction = `
-    You are an expert Commercial Creative Director AI. 
-    Your goal is to analyze a product description and image, then generate 6 distinct, high-end visual prompts for an image generation model.
-    
-    CRITICAL INSTRUCTION: The user has specified a specific target audience or style filter: "${filter}".
-    You MUST tailor ALL 6 prompts to appeal specifically to this filter. 
-    If the filter is "Men", focus on masculine aesthetics, bold lighting, or relevant contexts.
-    If the filter is "Cartoon Character", the product should interact with animated characters or exist in a stylized world.
-    If the filter is "Artists", focus on creative, abstract, or studio settings.
-    
-    The 6 required styles (adapted for the "${filter}" filter) are:
-    1. Metáfora Surreal de Luxo (Surreal Luxury Metaphor)
-    2. Conceito Tecnológico Futurista (Futuristic Tech Concept)
-    3. Impacto Emocional Cinematográfico (Cinematic Emotional Impact)
-    4. Estética Clean Comercial Premium (Clean Premium Commercial)
-    5. Conceito Artístico Abstrato (Abstract Artistic Concept)
-    6. Narrativa Simbólica de Marca (Symbolic Brand Narrative)
-    
-    For each style, write a detailed, descriptive prompt (in English) that incorporates the user's product description but elevates it to a global ad campaign level targeting "${filter}".
-    Keep the prompt focused on visual details, lighting, texture, and composition.
-  `;
+  const systemInstruction = getSystemInstructionForStyle(filter);
 
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: {
       parts: [
-        { text: `Analyze this product: "${description}". The target filter is: "${filter}". Generate the 6 prompts.` },
+        { text: `Analyze this product: "${description}". The selected Generator Style is: "${filter}". Generate 6 distinct visual prompts strictly following this style's rules.` },
         {
           inlineData: {
             mimeType: mimeType,
@@ -96,8 +151,6 @@ export const generateCommercialImage = async (
   const ai = getAiClient();
 
   // Using 'gemini-2.5-flash-image' (Nano Banana)
-  // We provide the original image to guide the generation (Identity preservation)
-  // plus the creative prompt.
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-image",
     contents: {
@@ -115,7 +168,6 @@ export const generateCommercialImage = async (
     },
     config: {
         // Nano Banana doesn't support responseMimeType/Schema
-        // We parse manually
     }
   });
 
@@ -146,19 +198,15 @@ export const generateCommercialImage = async (
  * Animates the selected static image.
  */
 export const generateCommercialVideo = async (
-  imageBase64: string, // The GENERATED image, not the original
+  imageBase64: string,
   mimeType: string,
   quality: 'preview' | 'final' = 'preview'
 ): Promise<string> => {
   // IMPORTANT: Re-instantiate client here to pick up the API Key from the selection dialog if it happened
-  // However, since process.env.API_KEY is injected, we assume it's correct context. 
-  // We will perform the key check in the React component before calling this.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const animationPrompt = "Cinematic camera movement, slow dolly in towards the product. Subtle dynamic lighting changes. High-end commercial look. 4k resolution.";
   
-  // Use 'veo-3.1-fast-generate-preview' for both, differentiating by resolution.
-  // Preview = 720p, Final = 1080p.
   const resolution = quality === 'preview' ? '720p' : '1080p';
 
   let operation = await ai.models.generateVideos({
@@ -171,13 +219,13 @@ export const generateCommercialVideo = async (
     config: {
       numberOfVideos: 1,
       resolution: resolution,
-      aspectRatio: "16:9", // Landscape for commercial
+      aspectRatio: "16:9",
     },
   });
 
   // Poll for completion
   while (!operation.done) {
-    await new Promise((resolve) => setTimeout(resolve, 5000)); // Poll every 5s
+    await new Promise((resolve) => setTimeout(resolve, 5000));
     operation = await ai.operations.getVideosOperation({ operation: operation });
   }
 

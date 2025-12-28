@@ -9,13 +9,19 @@ AdFusion AI is a React-based web application that acts as an automated creative 
 ## 🚀 Key Features
 
 *   **Multi-Agent Workflow:**
-    *   **Interpreter Agent:** Analyzes the product image and text to understand audience and sentiment.
-    *   **Creative Director Agent:** Generates 6 distinct visual campaign concepts (Luxury, Tech, Minimalist, etc.).
+    *   **Dynamic Interpreter Agent:** Adapts its persona based on the chosen style (e.g., acting as a Food Stylist, Miniature Architect, or VFX Supervisor).
+    *   **Creative Director Agent:** Generates 6 distinct visual campaign concepts tailored to the selected genre.
+*   **Specialized AI Generators:**
+    *   **Cinematic Ad Studio:** High-impact viral commercial aesthetics.
+    *   **Chibi Shop:** Turns products into cute 3D isometric miniature stores.
+    *   **Knolling Layout:** Deconstructs objects into organized, museum-quality grids.
+    *   **Dynamic Forces:** Surrounds products with elemental fire, water, ice, or wind.
+    *   **Glossy Glass Icons:** Converts logos into modern Apple-style 3D glass icons.
+    *   **Landmark Infographics:** Overlays technical blueprints on architectural images.
 *   **Generative Imagery (Nano Banana):** Uses `gemini-2.5-flash-image` to render photorealistic "Hero Shots" while preserving product identity.
 *   **Cinematic Video (Veo 3):** Uses `veo-3.1` to turn the static image into a moving video with camera pans, dollies, and lighting effects.
 *   **Preview Mode:** Generate quick 720p previews before committing to full 1080p rendering.
 *   **Responsive UI:** Fully responsive design with Dark/Light mode support.
-*   **Progressive Loading:** Skeleton screens and detailed status updates keep the user informed.
 
 ---
 
@@ -68,12 +74,13 @@ AdFusion AI is a React-based web application that acts as an automated creative 
 ## 📖 How to Use
 
 1.  **Upload:** Click the upload box to select a product image (PNG/JPG).
-2.  **Describe:** Enter a brief description (e.g., "A luxury gold watch").
-3.  **Analyze:** Click "Generate Concepts". The AI agents will analyze the product and create 6 unique visual styles.
-4.  **Select:** Browse the gallery of generated images. Click on the one that best fits your vision.
-5.  **Preview:** Click "Generate Preview" to create a short 720p video.
-6.  **Finalize:** If you like the preview, confirm to generate the high-quality 1080p commercial.
-7.  **Download:** Save your video file.
+2.  **Select Generator:** Choose a specialized style (e.g., "Chibi Shop", "Cinematic Ad", "Knolling").
+3.  **Describe:** Enter a brief description or prompt.
+4.  **Analyze:** Click "Generate Concepts". The AI agents will analyze the product and create 6 unique visual styles based on your selected generator.
+5.  **Select:** Browse the gallery of generated images. Click on the one that best fits your vision.
+6.  **Preview:** Click "Generate Preview" to create a short 720p video.
+7.  **Finalize:** If you like the preview, confirm to generate the high-quality 1080p commercial.
+8.  **Download:** Save your video file.
 
 ---
 

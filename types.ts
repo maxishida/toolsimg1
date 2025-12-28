@@ -34,8 +34,20 @@ export interface AgentAnalysis {
   }[];
 }
 
+// The specific generators requested by the user
+export type GeneratorStyleId = 
+  | 'cinematic_ad' 
+  | 'chibi_shop' 
+  | 'knolling_layout' 
+  | 'dynamic_forces' 
+  | 'glossy_logo' 
+  | 'textured_logo' 
+  | 'landmark_infographic' 
+  | 'seasonal_cycle' 
+  | 'crave_canvas' 
+  | 'art_studio';
+
 // Global type for the AI Studio key selection
-// We augment the AIStudio interface because window.aistudio is already declared as type AIStudio in the environment.
 declare global {
   interface AIStudio {
     hasSelectedApiKey: () => Promise<boolean>;

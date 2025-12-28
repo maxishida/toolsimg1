@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { AgentAnalysis, GeneratedImage } from "../types";
+import { AgentAnalysis, GeneratedImage, AspectRatio, CameraMovement } from "../types";
 
 // Initialize the API client
 const getAiClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -9,6 +9,19 @@ const getAiClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
  */
 const getSystemInstructionForStyle = (filter: string): string => {
   switch (filter) {
+    case 'ecommerce_studio':
+      return `
+        You are a Premium E-commerce Photographer AI.
+        Task: Create high-end, clean, and luxurious product photography for bags, watches, jewelry, or tech.
+        Requirement: Generate 6 variations focusing on:
+        1. Minimalist Podium (Clean luxury)
+        2. Lifestyle Hand-held (In context)
+        3. Hard Lighting (Sharp shadows, high contrast)
+        4. Soft Silk/Fabric Background (Texture play)
+        5. Nature/Sunlight (Golden hour glow)
+        6. Dark Mode (Moody, rim lighting)
+        Focus on: Texture detail (leather grain, metal shine), depth of field, and commercially viable composition.
+      `;
     case 'chibi_shop':
       return `
         You are a 3D Miniature Architect AI.
@@ -83,7 +96,7 @@ const getSystemInstructionForStyle = (filter: string): string => {
 };
 
 /**
- * AGENT 1 & 2: Product Interpreter & Prompt Architect
+ * AGENT 1 & 2: Product Interpreter & Prompt Architect & COPYWRITER
  */
 export const analyzeAndArchitectPrompts = async (
   description: string,
@@ -93,13 +106,14 @@ export const analyzeAndArchitectPrompts = async (
 ): Promise<AgentAnalysis> => {
   const ai = getAiClient();
 
-  const systemInstruction = getSystemInstructionForStyle(filter);
+  const systemInstruction = getSystemInstructionForStyle(filter) + 
+    "\n\n ADDITIONALLY: You are a Viral Marketing Copywriter. Generate engaging social media copy tailored to the product. CRITICAL: For each visual prompt, provide a specific 'marketingHook' tailored to that specific visual style.";
 
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: {
       parts: [
-        { text: `Analyze this product: "${description}". The selected Generator Style is: "${filter}". Generate 6 distinct visual prompts strictly following this style's rules.` },
+        { text: `Analyze this product: "${description}". The selected Generator Style is: "${filter}". Generate 6 distinct visual prompts strictly following this style's rules. ALSO generate the marketing copy.` },
         {
           inlineData: {
             mimeType: mimeType,
@@ -117,6 +131,17 @@ export const analyzeAndArchitectPrompts = async (
           category: { type: Type.STRING },
           audience: { type: Type.STRING },
           emotion: { type: Type.STRING },
+          marketingCopy: {
+            type: Type.OBJECT,
+            properties: {
+              instagramCaption: { type: Type.STRING, description: "Engaging caption with emojis" },
+              linkedinPost: { type: Type.STRING, description: "Professional yet catchy post text" },
+              tiktokHook: { type: Type.STRING, description: "First 3 seconds spoken hook script" },
+              oneLiner: { type: Type.STRING, description: "Punchy slogan" },
+              hashtags: { type: Type.ARRAY, items: { type: Type.STRING } }
+            },
+            required: ["instagramCaption", "linkedinPost", "tiktokHook", "hashtags", "oneLiner"]
+          },
           prompts: {
             type: Type.ARRAY,
             items: {
@@ -124,12 +149,13 @@ export const analyzeAndArchitectPrompts = async (
               properties: {
                 styleName: { type: Type.STRING },
                 promptText: { type: Type.STRING },
+                marketingHook: { type: Type.STRING, description: "A short, punchy 1-sentence caption specific to this visual style." }
               },
-              required: ["styleName", "promptText"],
+              required: ["styleName", "promptText", "marketingHook"],
             },
           },
         },
-        required: ["category", "audience", "emotion", "prompts"],
+        required: ["category", "audience", "emotion", "prompts", "marketingCopy"],
       },
     },
   });
@@ -141,16 +167,18 @@ export const analyzeAndArchitectPrompts = async (
 /**
  * NANO BANANA (Gemini Flash Image)
  * Generates an image based on one of the architected prompts.
+ * UPDATED: Supports Aspect Ratio
  */
 export const generateCommercialImage = async (
   prompt: string,
   styleName: string,
   originalImageBase64: string,
-  mimeType: string
+  mimeType: string,
+  aspectRatio: AspectRatio = '16:9'
 ): Promise<GeneratedImage> => {
   const ai = getAiClient();
 
-  // Using 'gemini-2.5-flash-image' (Nano Banana)
+  // 'gemini-2.5-flash-image' supports aspect ratio config
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-image",
     contents: {
@@ -167,7 +195,10 @@ export const generateCommercialImage = async (
       ],
     },
     config: {
-        // Nano Banana doesn't support responseMimeType/Schema
+        // Nano Banana specific config
+        imageConfig: {
+           aspectRatio: aspectRatio, // '16:9' or '9:16'
+        }
     }
   });
 
@@ -196,16 +227,20 @@ export const generateCommercialImage = async (
 /**
  * VEO 3 (Video Generation)
  * Animates the selected static image.
+ * UPDATED: Supports Aspect Ratio & Camera Movement
  */
 export const generateCommercialVideo = async (
   imageBase64: string,
   mimeType: string,
+  aspectRatio: AspectRatio,
+  cameraMovement: CameraMovement,
   quality: 'preview' | 'final' = 'preview'
 ): Promise<string> => {
   // IMPORTANT: Re-instantiate client here to pick up the API Key from the selection dialog if it happened
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-  const animationPrompt = "Cinematic camera movement, slow dolly in towards the product. Subtle dynamic lighting changes. High-end commercial look. 4k resolution.";
+  // Incorporate specific camera movement into the prompt
+  const animationPrompt = `Cinematic camera movement, ${cameraMovement} focused on the product. Subtle dynamic lighting changes. High-end commercial look. 4k resolution.`;
   
   const resolution = quality === 'preview' ? '720p' : '1080p';
 
@@ -219,7 +254,7 @@ export const generateCommercialVideo = async (
     config: {
       numberOfVideos: 1,
       resolution: resolution,
-      aspectRatio: "16:9",
+      aspectRatio: aspectRatio, // Veo supports '16:9' and '9:16'
     },
   });
 

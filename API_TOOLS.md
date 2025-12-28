@@ -5,7 +5,7 @@ This document details the specific Google Gemini API "tools" and model configura
 ---
 
 ## 1. Dynamic Agent System: Product Interpreter & Prompt Architect
-**Function:** Analyzes raw product inputs and generates structured, creative campaign data.
+**Function:** Analyzes raw product inputs, generates structured creative campaign data, and writes marketing copy.
 **Model:** `gemini-3-flash-preview`
 **Method:** `ai.models.generateContent`
 
@@ -14,6 +14,7 @@ The System Instruction (Persona) of this agent changes dynamically based on the 
 
 | Generator Style | Persona (System Instruction Role) | Key Task |
 | :--- | :--- | :--- |
+| **E-commerce Studio** (NEW) | `Premium E-commerce Photographer AI` | Clean, luxury photography for bags, watches, jewelry. |
 | **Cinematic Ad** (Default) | `Commercial Creative Director AI` | Generate high-end, viral global ad campaign concepts. |
 | **Chibi Shop** | `3D Miniature Architect AI` | Transform product into a "Chibi Style" isometric shop/building. |
 | **Knolling Layout** | `Industrial Design Layout AI` | Deconstruct product into a perfect 90-degree grid layout. |
@@ -26,11 +27,11 @@ The System Instruction (Persona) of this agent changes dynamically based on the 
 | **Art Studio** | `Fine Art Curator AI` | Re-imagine product in Oil Paint, Cyberpunk, Watercolor styles. |
 
 ### Configuration (`GenerationConfig`)
-We utilize **JSON Mode** with a strict schema to ensure the UI can deterministically parse the AI's creative output.
+We utilize **JSON Mode** with a strict schema to ensure the UI can deterministically parse the AI's creative output, including the new **Marketing Copy** section.
 
 ```typescript
 config: {
-  systemInstruction: getSystemInstructionForStyle(selectedStyle), // Dynamic based on user selection
+  systemInstruction: getSystemInstructionForStyle(selectedStyle) + " You are a Viral Marketing Copywriter...",
   responseMimeType: "application/json",
   responseSchema: {
     type: Type.OBJECT,
@@ -38,19 +39,31 @@ config: {
       category: { type: Type.STRING },
       audience: { type: Type.STRING },
       emotion: { type: Type.STRING },
+      marketingCopy: {
+        type: Type.OBJECT,
+        properties: {
+          instagramCaption: { type: Type.STRING },
+          linkedinPost: { type: Type.STRING },
+          tiktokHook: { type: Type.STRING },
+          oneLiner: { type: Type.STRING },
+          hashtags: { type: Type.ARRAY, items: { type: Type.STRING } }
+        },
+        required: ["instagramCaption", "linkedinPost", "tiktokHook", "hashtags", "oneLiner"]
+      },
       prompts: {
         type: Type.ARRAY,
         items: {
           type: Type.OBJECT,
           properties: {
-            styleName: { type: Type.STRING }, // e.g., "Isometric View", "Fire Storm"
-            promptText: { type: Type.STRING }, // Detailed visual description
+            styleName: { type: Type.STRING },
+            promptText: { type: Type.STRING },
+            marketingHook: { type: Type.STRING } // Specific caption per visual
           },
-          required: ["styleName", "promptText"],
+          required: ["styleName", "promptText", "marketingHook"],
         },
       },
     },
-    required: ["category", "audience", "emotion", "prompts"],
+    required: ["category", "audience", "emotion", "prompts", "marketingCopy"],
   },
 }
 ```
@@ -71,14 +84,15 @@ To ensure the generated commercial looks like the *actual* product uploaded by t
 2.  **Reinforcement Prompt:**
     > "...The product in the image MUST be the central hero. Maintain the product's core identity but place it in this new environment. High fidelity, 8k, photorealistic commercial photography."
 
-### Output Handling
-Unlike text models, this model returns the image data directly in the `inlineData` part of the response candidate.
+### Configuration
+We now dynamically control the aspect ratio based on user selection (e.g., Vertical for TikTok).
 
 ```typescript
-// Extraction Logic
-const part = response.candidates[0].content.parts.find(p => p.inlineData);
-const base64 = part.inlineData.data;
-const mime = part.inlineData.mimeType;
+config: {
+    imageConfig: {
+       aspectRatio: aspectRatio, // '16:9' or '9:16'
+    }
+}
 ```
 
 ---
@@ -90,21 +104,25 @@ const mime = part.inlineData.mimeType;
 *   **Method:** `ai.models.generateVideos` -> `ai.operations.getVideosOperation`
 
 ### Configuration Strategy
-We support two quality tiers by adjusting the `resolution` parameter in the config.
+We support two quality tiers and variable aspect ratios.
 
-| Tier | Resolution | Use Case | Speed |
-| :--- | :--- | :--- | :--- |
-| **Preview** | `720p` | Quick feedback loop | Fast |
-| **Final** | `1080p` | Final broadcast download | Slower |
+| Tier | Resolution | Use Case |
+| :--- | :--- | :--- |
+| **Preview** | `720p` | Quick feedback loop |
+| **Final** | `1080p` | Final broadcast download |
 
 ```typescript
 // Config Object
 config: {
   numberOfVideos: 1,
   resolution: quality === 'preview' ? '720p' : '1080p',
-  aspectRatio: '16:9', // Landscape standard for commercials
+  aspectRatio: aspectRatio, // '16:9' or '9:16'
 }
 ```
+
+### Prompting Strategy (Director Mode)
+We inject camera movements into the Veo prompt:
+> `Cinematic camera movement, ${cameraMovement} focused on the product...`
 
 ### Video Retrieval
 The Veo API returns a **URI** (e.g., `https://...`). To download the actual video binary (`.mp4`), the client must perform a `fetch` request appending the API key.

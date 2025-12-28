@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { AppStep, ProductInfo, GeneratedImage } from './types';
+import { AppStep, ProductInfo, GeneratedImage, AspectRatio, CameraMovement, AgentAnalysis } from './types';
 import InputSection from './components/InputSection';
 import GenerationGallery from './components/GenerationGallery';
 import LoadingOverlay from './components/LoadingOverlay';
 import VideoResult from './components/VideoResult';
 import PreviewModal from './components/PreviewModal';
+import CampaignStrategy from './components/CampaignStrategy'; // Import new component
 import { analyzeAndArchitectPrompts, generateCommercialImage, generateCommercialVideo } from './services/geminiService';
 import { AlertTriangle, Crown, Moon, Sun } from 'lucide-react';
 
@@ -13,6 +14,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   
   const [productInfo, setProductInfo] = useState<ProductInfo | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<AgentAnalysis | null>(null); // Store analysis
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -53,35 +55,46 @@ const App: React.FC = () => {
     });
   };
 
-  const handleStart = async (description: string, file: File, filter: string) => {
+  const handleStart = async (description: string, file: File, filter: string, aspectRatio: AspectRatio, cameraMovement: CameraMovement) => {
     try {
       setStep(AppStep.ANALYZING);
       setError(null);
       const base64 = await fileToBase64(file);
-      const info = { description, imageBase64: base64, mimeType: file.type };
+      const info: ProductInfo = { 
+        description, 
+        imageBase64: base64, 
+        mimeType: file.type,
+        aspectRatio,
+        cameraMovement
+      };
       setProductInfo(info);
 
       // 1. Analyze & Architect with Filter
       const analysis = await analyzeAndArchitectPrompts(description, base64, file.type, filter);
       console.log('Analysis:', analysis);
+      setAnalysisResult(analysis); // Store for Strategy Display
 
       // 2. Initialize Placeholders and switch to Gallery View immediately
+      // Update: Map marketingHook to caption
       const initialPlaceholders: GeneratedImage[] = analysis.prompts.map((p, index) => ({
         id: `loading-${index}`,
         prompt: p.promptText,
         styleName: p.styleName,
+        caption: p.marketingHook, // Pass specific hook to caption
         status: 'loading'
       }));
       setGeneratedImages(initialPlaceholders);
       setStep(AppStep.SELECTION);
 
       // 3. Trigger Parallel Generation with individual state updates
+      // Pass the selected Aspect Ratio to the Image Generator
       analysis.prompts.forEach((p) => {
-        generateCommercialImage(p.promptText, p.styleName, base64, file.type)
+        generateCommercialImage(p.promptText, p.styleName, base64, file.type, aspectRatio)
           .then((result) => {
+            // Merge the result with the placeholder caption
             setGeneratedImages((prev) => 
               prev.map((item) => 
-                item.styleName === p.styleName ? result : item
+                item.styleName === p.styleName ? { ...result, caption: p.marketingHook } : item
               )
             );
           })
@@ -130,7 +143,7 @@ const App: React.FC = () => {
   };
 
   const proceedToPreview = async () => {
-    if (!selectedImage || !selectedImage.imageUrl) return;
+    if (!selectedImage || !selectedImage.imageUrl || !productInfo) return;
     setStep(AppStep.ANIMATING); // Use animating state for loader
     try {
         const parts = selectedImage.imageUrl.split(',');
@@ -138,7 +151,13 @@ const App: React.FC = () => {
         const data = parts[1];
 
         // Generate Preview (720p)
-        const url = await generateCommercialVideo(data, mime, 'preview');
+        const url = await generateCommercialVideo(
+            data, 
+            mime, 
+            productInfo.aspectRatio, 
+            productInfo.cameraMovement, 
+            'preview'
+        );
         setPreviewUrl(url);
         setStep(AppStep.PREVIEWING);
     } catch (e: any) {
@@ -150,7 +169,7 @@ const App: React.FC = () => {
 
   // Step 2: Request Final (1080p)
   const handleGenerateFinal = async () => {
-    if (!selectedImage || !selectedImage.imageUrl) return;
+    if (!selectedImage || !selectedImage.imageUrl || !productInfo) return;
     setStep(AppStep.ANIMATING); // Reuse animating screen
     try {
         const parts = selectedImage.imageUrl.split(',');
@@ -158,7 +177,13 @@ const App: React.FC = () => {
         const data = parts[1];
 
         // Generate Final (1080p)
-        const url = await generateCommercialVideo(data, mime, 'final');
+        const url = await generateCommercialVideo(
+            data, 
+            mime, 
+            productInfo.aspectRatio, 
+            productInfo.cameraMovement, 
+            'final'
+        );
         setVideoUrl(url);
         setStep(AppStep.COMPLETED);
     } catch (e: any) {
@@ -176,6 +201,7 @@ const App: React.FC = () => {
   const handleReset = () => {
     setStep(AppStep.INPUT);
     setProductInfo(null);
+    setAnalysisResult(null);
     setGeneratedImages([]);
     setSelectedImage(null);
     setVideoUrl(null);
@@ -196,9 +222,9 @@ const App: React.FC = () => {
           </div>
           <div className="flex items-center gap-6">
             <div className="hidden md:block text-sm font-medium text-slate-500 dark:text-slate-400">
-               {step === AppStep.INPUT && "Step 1: Brief"}
+               {step === AppStep.INPUT && "Step 1: Brief & Config"}
                {(step === AppStep.ANALYZING) && "Step 2: Analysis"}
-               {(step === AppStep.SELECTION) && "Step 3: Select"}
+               {(step === AppStep.SELECTION) && "Step 3: Concept Selection"}
                {(step === AppStep.PREVIEWING) && "Step 3.5: Preview"}
                {(step === AppStep.ANIMATING) && "Step 4: Animate"}
                {step === AppStep.COMPLETED && "Done"}
@@ -239,6 +265,12 @@ const App: React.FC = () => {
                 selectedId={selectedImage?.id || null} 
                 onGenerateVideo={handleGeneratePreview}
               />
+              
+              {/* NEW: Strategy Dashboard displays below the gallery */}
+              {analysisResult && (
+                 <CampaignStrategy analysis={analysisResult} />
+              )}
+
               {/* Overlay Modal for Preview */}
               {step === AppStep.PREVIEWING && previewUrl && (
                   <PreviewModal 

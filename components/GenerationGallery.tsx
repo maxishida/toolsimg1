@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { GeneratedImage } from '../types';
-import { CheckCircle2, PlayCircle, ImageIcon, AlertCircle } from 'lucide-react';
+import { CheckCircle2, PlayCircle, ImageIcon, AlertCircle, Copy, Download, Check } from 'lucide-react';
 
 interface GenerationGalleryProps {
   images: GeneratedImage[];
@@ -10,6 +10,24 @@ interface GenerationGalleryProps {
 }
 
 const GenerationGallery: React.FC<GenerationGalleryProps> = ({ images, onSelect, selectedId, onGenerateVideo }) => {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopy = (e: React.MouseEvent, id: string, text: string) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleDownload = (e: React.MouseEvent, imageUrl: string, filename: string) => {
+    e.stopPropagation();
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = `adfusion-${filename.toLowerCase().replace(/\s/g, '-')}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   
   return (
     <div className="max-w-7xl mx-auto">
@@ -31,7 +49,7 @@ const GenerationGallery: React.FC<GenerationGalleryProps> = ({ images, onSelect,
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {images.map((img) => {
           const isSelected = selectedId === img.id;
           const isLoading = img.status === 'loading';
@@ -39,17 +57,16 @@ const GenerationGallery: React.FC<GenerationGalleryProps> = ({ images, onSelect,
           
           if (isLoading) {
             return (
-              <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 animate-pulse">
-                <div className="absolute inset-0 flex items-center justify-center opacity-10">
+              <div key={img.id} className="relative aspect-[3/4] md:aspect-square rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 animate-pulse flex flex-col">
+                <div className="flex-grow flex items-center justify-center opacity-10">
                   <ImageIcon size={64} className="text-slate-400 dark:text-slate-500" />
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 p-5">
+                <div className="p-5 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
                   <span className="text-xs font-bold text-slate-400 dark:text-slate-600 uppercase tracking-wider mb-2 block">
                     {img.styleName}
                   </span>
                   <div className="space-y-2">
                     <div className="h-3 bg-slate-300 dark:bg-slate-800 rounded w-3/4"></div>
-                    <div className="h-3 bg-slate-300 dark:bg-slate-800 rounded w-1/2"></div>
                   </div>
                 </div>
               </div>
@@ -70,33 +87,63 @@ const GenerationGallery: React.FC<GenerationGalleryProps> = ({ images, onSelect,
             <div
               key={img.id}
               onClick={() => onSelect(img)}
-              className={`group relative aspect-square rounded-xl overflow-hidden cursor-pointer border-2 transition-all duration-300
-                ${isSelected ? 'border-amber-500 ring-4 ring-amber-500/20 scale-[1.02]' : 'border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-600 hover:shadow-xl'}`}
+              className={`group relative rounded-xl overflow-hidden cursor-pointer border-2 transition-all duration-300 flex flex-col bg-white dark:bg-slate-800 shadow-sm
+                ${isSelected ? 'border-amber-500 ring-4 ring-amber-500/20 scale-[1.02] shadow-xl' : 'border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 hover:shadow-lg'}`}
             >
-              {img.imageUrl && (
-                <img 
-                  src={img.imageUrl} 
-                  alt={img.styleName} 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                />
-              )}
-              
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-100 transition-opacity" />
-              
-              <div className="absolute top-4 right-4">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all
-                  ${isSelected ? 'bg-amber-500 text-slate-900' : 'bg-black/50 text-slate-500'}`}>
-                  {isSelected ? <CheckCircle2 size={20} /> : <div className="w-4 h-4 rounded-full border-2 border-slate-500" />}
+              {/* Image Container */}
+              <div className="relative aspect-square overflow-hidden bg-slate-900">
+                 {img.imageUrl && (
+                  <img 
+                    src={img.imageUrl} 
+                    alt={img.styleName} 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                )}
+                 {/* Selection Indicator overlay */}
+                <div className={`absolute inset-0 bg-black/40 transition-opacity flex items-center justify-center
+                    ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                    <div className={`px-4 py-2 rounded-full font-bold flex items-center gap-2 transform transition-transform
+                        ${isSelected ? 'bg-amber-500 text-slate-900 scale-110' : 'bg-white/20 backdrop-blur-md text-white scale-90 group-hover:scale-100'}`}>
+                        {isSelected ? <><CheckCircle2 size={18}/> Selected</> : "Select for Animation"}
+                    </div>
                 </div>
               </div>
 
-              <div className="absolute bottom-0 left-0 right-0 p-5">
-                <span className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-1 block">
-                  {img.styleName}
-                </span>
-                <p className="text-sm text-slate-300 line-clamp-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity">
-                  {img.prompt}
-                </p>
+              {/* Card Footer: Copy & Text */}
+              <div className="p-4 flex flex-col gap-3 h-full">
+                <div className="flex items-center justify-between">
+                   <span className="text-xs font-bold text-amber-500 uppercase tracking-wider">
+                    {img.styleName}
+                  </span>
+                  <div className="flex gap-1">
+                      {img.imageUrl && (
+                        <button 
+                            onClick={(e) => handleDownload(e, img.imageUrl!, img.styleName)}
+                            className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                            title="Download Image"
+                        >
+                            <Download size={16} />
+                        </button>
+                      )}
+                      {img.caption && (
+                          <button 
+                              onClick={(e) => handleCopy(e, img.id, img.caption!)}
+                              className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors relative"
+                              title="Copy Caption"
+                          >
+                              {copiedId === img.id ? <Check size={16} className="text-green-500"/> : <Copy size={16} />}
+                          </button>
+                      )}
+                  </div>
+                </div>
+                
+                {img.caption && (
+                     <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
+                        <p className="text-sm text-slate-600 dark:text-slate-300 italic leading-snug">
+                            "{img.caption}"
+                        </p>
+                     </div>
+                )}
               </div>
             </div>
           );

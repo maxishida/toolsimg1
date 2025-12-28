@@ -18,7 +18,10 @@ const App: React.FC = () => {
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
+  
+  // Changed: Now stores an array of videos for the final result
+  const [finalVideoVariations, setFinalVideoVariations] = useState<{url: string, movement: string}[]>([]);
 
   // Dark mode state initialized from localStorage or system preference
   const [darkMode, setDarkMode] = useState(() => {
@@ -145,12 +148,13 @@ const App: React.FC = () => {
   const proceedToPreview = async () => {
     if (!selectedImage || !selectedImage.imageUrl || !productInfo) return;
     setStep(AppStep.ANIMATING); // Use animating state for loader
+    setLoadingMessage("Generating 720p Preview...");
     try {
         const parts = selectedImage.imageUrl.split(',');
         const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/png';
         const data = parts[1];
 
-        // Generate Preview (720p)
+        // Generate Preview (720p) - Single video based on user selection
         const url = await generateCommercialVideo(
             data, 
             mime, 
@@ -164,32 +168,87 @@ const App: React.FC = () => {
         console.error(e);
         setError("Failed to generate preview. Ensure you selected a paid API key Project.");
         setStep(AppStep.SELECTION);
+    } finally {
+        setLoadingMessage(null);
     }
   };
 
-  // Step 2: Request Final (1080p)
+  // Step 2: Generate 6 Variations (1080p)
   const handleGenerateFinal = async () => {
     if (!selectedImage || !selectedImage.imageUrl || !productInfo) return;
     setStep(AppStep.ANIMATING); // Reuse animating screen
+    
     try {
         const parts = selectedImage.imageUrl.split(',');
         const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/png';
         const data = parts[1];
 
-        // Generate Final (1080p)
-        const url = await generateCommercialVideo(
-            data, 
-            mime, 
-            productInfo.aspectRatio, 
-            productInfo.cameraMovement, 
-            'final'
-        );
-        setVideoUrl(url);
+        // Define the 6 variations we want to generate
+        const movements: CameraMovement[] = ['Dolly In', 'Dolly Out', 'Pan Left', 'Pan Right', 'Orbit', 'Crane Up'];
+        const successfulVideos: { url: string, movement: string }[] = [];
+
+        // Launch SEQUENTIAL requests to avoid rate limits (429 Resource Exhausted)
+        for (let i = 0; i < movements.length; i++) {
+            const move = movements[i];
+            let retries = 0;
+            const maxRetries = 2; // Maximum retries per video
+            let success = false;
+
+            while (!success && retries <= maxRetries) {
+                const isRetry = retries > 0;
+                setLoadingMessage(`Generating variation ${i + 1} of ${movements.length}: ${move}${isRetry ? ` (Retry ${retries})` : ''}...`);
+                
+                try {
+                    // Add delay between requests to be gentle on quotas
+                    // Exponential backoff for retries: 5s, 10s, 20s
+                    // Standard delay between successful items: 3s
+                    const delay = isRetry ? 5000 * Math.pow(2, retries) : (i === 0 ? 0 : 3000);
+                    
+                    if (delay > 0) {
+                        await new Promise(r => setTimeout(r, delay));
+                    }
+
+                    const url = await generateCommercialVideo(
+                        data, 
+                        mime, 
+                        productInfo.aspectRatio, 
+                        move, 
+                        'final' // 1080p
+                    );
+                    successfulVideos.push({ url, movement: move });
+                    success = true;
+                } catch (err: any) {
+                    console.error(`Failed to generate ${move} (Attempt ${retries + 1})`, err);
+                    
+                    const errMsg = JSON.stringify(err) + (err.message || '');
+                    const isQuotaError = errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota');
+                    
+                    if (isQuotaError) {
+                        retries++;
+                        if (retries > maxRetries) {
+                            console.warn(`Skipping ${move} after max retries due to quota limits.`);
+                        }
+                    } else {
+                        // For non-quota errors, don't retry endlessly
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (successfulVideos.length === 0) {
+            throw new Error("All video variations failed. Please check your API quota or billing.");
+        }
+
+        setFinalVideoVariations(successfulVideos);
         setStep(AppStep.COMPLETED);
+
     } catch (e: any) {
         console.error(e);
-        setError("Failed to generate final video.");
+        setError(e.message || "Failed to generate final videos.");
         setStep(AppStep.PREVIEWING); // Go back to preview if final fails
+    } finally {
+        setLoadingMessage(null);
     }
   };
 
@@ -199,7 +258,7 @@ const App: React.FC = () => {
   };
 
   const handleBackToGallery = () => {
-    setVideoUrl(null);
+    setFinalVideoVariations([]);
     setStep(AppStep.SELECTION);
   }
 
@@ -209,7 +268,7 @@ const App: React.FC = () => {
     setAnalysisResult(null);
     setGeneratedImages([]);
     setSelectedImage(null);
-    setVideoUrl(null);
+    setFinalVideoVariations([]);
     setPreviewUrl(null);
     setError(null);
   };
@@ -297,11 +356,11 @@ const App: React.FC = () => {
         )}
 
         {step === AppStep.ANIMATING && (
-           <LoadingOverlay status="animating" />
+           <LoadingOverlay status="animating" customMessage={loadingMessage} />
         )}
 
-        {step === AppStep.COMPLETED && videoUrl && (
-          <VideoResult videoUrl={videoUrl} onReset={handleReset} onBack={handleBackToGallery} />
+        {step === AppStep.COMPLETED && finalVideoVariations.length > 0 && (
+          <VideoResult videos={finalVideoVariations} onReset={handleReset} onBack={handleBackToGallery} />
         )}
       </main>
 

@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 
 interface LoadingOverlayProps {
   status: string; // 'analyzing' | 'generating_images' | 'animating'
+  customMessage?: string | null;
 }
 
-const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ status }) => {
+const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ status, customMessage }) => {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -37,11 +38,12 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ status }) => {
         setMessage(messages[i]);
       }, 2500);
     } else if (status === 'animating') {
+      // Default messages if no custom message is provided
       const messages = [
-        "Veo 3.1: Calculating camera path...",
-        "Applying physics and particles...",
-        "Rendering video frames (720p)...",
-        "This may take a minute..."
+        "Veo 3.1: Initializing Director Mode...",
+        "Rendering High-Definition variations...",
+        "This may take a few minutes...",
+        "Applying final color grading..."
       ];
       let i = 0;
       setMessage(messages[0]);
@@ -63,7 +65,9 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ status }) => {
           <div className="w-2 h-2 bg-purple-500 rounded-full animate-ping"></div>
         </div>
       </div>
-      <h3 className="mt-8 text-2xl font-bold text-slate-900 dark:text-white tracking-tight animate-pulse">{message}</h3>
+      <h3 className="mt-8 text-2xl font-bold text-slate-900 dark:text-white tracking-tight animate-pulse text-center px-4">
+        {customMessage || message}
+      </h3>
       <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">Powered by Gemini & Veo</p>
     </div>
   );

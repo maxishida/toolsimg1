@@ -1,5 +1,5 @@
 import React from 'react';
-import { Film, Check, X } from 'lucide-react';
+import { Film, Check, X, Layers } from 'lucide-react';
 
 interface PreviewModalProps {
   videoUrl: string;
@@ -35,7 +35,7 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ videoUrl, onConfirm, onCanc
         <div className="p-6 bg-slate-800/50 flex flex-col md:flex-row items-center justify-between gap-4 shrink-0">
            <div className="text-sm text-slate-400">
              <p className="font-semibold text-slate-300">Preview Quality (720p)</p>
-             <p>Generate final campaign to get full 1080p high-definition video.</p>
+             <p>Generate final campaign to get <span className="text-amber-500 font-bold">6 distinct variations</span> in 1080p.</p>
            </div>
            <div className="flex gap-3 w-full md:w-auto">
              <button 
@@ -50,9 +50,9 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ videoUrl, onConfirm, onCanc
                disabled={isProcessing}
                className="px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:shadow-lg hover:shadow-amber-500/20 transition-all flex-1 md:flex-none flex items-center justify-center gap-2 disabled:opacity-50"
              >
-               {isProcessing ? 'Generating Final...' : (
+               {isProcessing ? 'Generating Batch...' : (
                  <>
-                   <Check size={20} /> Generate Final (1080p)
+                   <Layers size={20} /> Generate 6 Variations
                  </>
                )}
              </button>
